@@ -92,11 +92,22 @@ eventHandler event =
             case interaction of 
                 (InteractionApplicationCommand {interactionId = id, interactionUser = u, interactionToken = token , applicationCommandData = data1, ..}) -> 
                     case data1 of 
-                       ApplicationCommandDataMessage {applicationCommandDataName = t} -> 
+                       ApplicationCommandDataChatInput {applicationCommandDataName = t} -> 
                              case u of 
-                                (MemberOrUser (Left _)) -> do
-                                    lift $ putStrLn "Guild member tried to say hello"
-                                    return () 
+                                (MemberOrUser (Left guildmem)) -> do
+                                    let nickname = case memberNick guildmem of 
+                                                    Nothing -> ""
+                                                    Just x  -> x
+                                    case t of 
+                                        "hello" -> do 
+                                           result <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (sayhello nickname)))
+                                           case result of 
+                                             Left e -> lift $ putStrLn $ "Error creating command: " ++ (show e)
+                                             Right _ -> do
+                                                lift $ putStrLn "success" 
+                                                return () 
+                                        _ -> lift $ putStrLn "User tried hello but it wasn't an option" 
+
                                 (MemberOrUser (Right user)) -> 
                                     let username = userName user
                                     in case t of 
