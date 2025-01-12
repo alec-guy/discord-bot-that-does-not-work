@@ -33,7 +33,17 @@ sayhello name =
     , interactionResponseMessageComponents = Nothing 
     , interactionResponseMessageAttachments = Nothing
     }
-
+countWords :: Text -> InteractionResponseMessage 
+countWords text = 
+    InteractionResponseMessage 
+    { interactionResponseMessageTTS = Nothing 
+    , interactionResponseMessageContent = Just $ pack $ show $ (show $ Prelude.length $ (Data.Text.words text), text)
+    , interactionResponseMessageEmbeds = Nothing 
+    , interactionResponseMessageAllowedMentions = Nothing 
+    , interactionResponseMessageFlags = Nothing 
+    , interactionResponseMessageComponents = Nothing 
+    , interactionResponseMessageAttachments = Nothing
+    }
 sayhelloCommand :: CreateApplicationCommand 
 sayhelloCommand = 
     CreateApplicationCommandChatInput 
@@ -45,7 +55,17 @@ sayhelloCommand =
     , createDefaultMemberPermissions = Nothing 
     , createDMPermission = Just False
     }
-
+countWordsCommand :: CreateApplicationCommand 
+countWordsCommand = 
+    CreateApplicationCommandChatInput 
+    { createName = "wordcount"
+    , createDescription = "bot will count words in your text"
+    , createLocalizedName = Nothing 
+    , createLocalizedDescription = Nothing 
+    , createOptions = Just $ OptionsValues [OptionValueString {optionValueName = "text", optionValueLocalizedName = Nothing , optionValueDescription = "enter text to echo back", optionValueLocalizedDescription = Nothing, optionValueRequired = True, optionValueStringChoices = Left False, optionValueStringMinLen = Just 1, optionValueStringMaxLen = Just 50}]
+    , createDefaultMemberPermissions = Nothing 
+    , createDMPermission = Just False
+    }
 myGatewayIntents = 
     GatewayIntent 
     { gatewayIntentGuilds = False 
@@ -92,7 +112,7 @@ eventHandler event =
             case interaction of 
                 (InteractionApplicationCommand {interactionId = id, interactionUser = u, interactionToken = token , applicationCommandData = data1, ..}) -> 
                     case data1 of 
-                       ApplicationCommandDataChatInput {applicationCommandDataName = t} -> 
+                       ApplicationCommandDataChatInput {applicationCommandDataName = t, optionsData = options} -> 
                              case u of 
                                 (MemberOrUser (Left guildmem)) -> do
                                     let nickname = case memberNick guildmem of 
@@ -102,10 +122,25 @@ eventHandler event =
                                         "hello" -> do 
                                            result <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (sayhello nickname)))
                                            case result of 
-                                             Left e -> lift $ putStrLn $ "Error creating command: " ++ (show e)
+                                             Left e -> lift $ putStrLn $ "Error executing hello command: " ++ (show e)
                                              Right _ -> do
-                                                lift $ putStrLn "success" 
+                                                lift $ putStrLn "success executing hello command" 
                                                 return () 
+                                        "wordcount" -> do 
+                                            let text = case options of 
+                                                        Nothing -> ""
+                                                        Just (OptionsDataValues [OptionDataValueString {optionDataValueName = t, optionDataValueString = e}]) -> 
+                                                            case e of 
+                                                                Left _ -> ""
+                                                                Right i -> i 
+                                                        _       -> ""
+                                                        
+                                            result2 <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (countWords text)))
+                                            case result2 of 
+                                             Left e -> lift $ putStrLn $ "Error executing count words command: " ++ (show e)
+                                             Right _ -> do
+                                                lift $ putStrLn "success executing count words command" 
+                                                return ()  
                                         _ -> lift $ putStrLn "User tried hello but it wasn't an option" 
 
                                 (MemberOrUser (Right user)) -> 
@@ -114,10 +149,25 @@ eventHandler event =
                                         "hello" -> do 
                                            result <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (sayhello username)))
                                            case result of 
-                                             Left e -> lift $ putStrLn $ "Error creating command: " ++ (show e)
+                                             Left e -> lift $ putStrLn $ "Error executing hello command: " ++ (show e)
                                              Right _ -> do
-                                                lift $ putStrLn "success" 
+                                                lift $ putStrLn "success executing hello command" 
                                                 return () 
+                                        "wordcount" -> do 
+                                            let text = case options of 
+                                                        Nothing -> ""
+                                                        Just (OptionsDataValues [OptionDataValueString {optionDataValueName = t, optionDataValueString = e}]) -> 
+                                                            case e of 
+                                                                Left _ -> ""
+                                                                Right i -> i 
+                                                        _       -> ""
+                                                        
+                                            result2 <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (countWords text)))
+                                            case result2 of 
+                                             Left e -> lift $ putStrLn $ "Error executing count words command: " ++ (show e)
+                                             Right _ -> do
+                                                lift $ putStrLn "success executing count words command" 
+                                                return ()   
                                         _ -> lift $ putStrLn "User tried hello but it wasn't an option" 
 
                                  
@@ -146,7 +196,11 @@ myDiscordOnStart = do
         appid   = fullApplicationID fullapp 
     result  <- restCall $ CreateGlobalApplicationCommand appid sayhelloCommand 
     case result of 
-        Left e -> lift $ putStrLn $ "Error creating command: " ++ (show e)
+        Left e -> lift $ putStrLn $ "Error creating command: say hello" ++ (show e)
+        Right _ -> return () 
+    result2 <- restCall $ CreateGlobalApplicationCommand appid countWordsCommand 
+    case result2 of 
+        Left e -> lift $ putStrLn $ "Error creating command count words: " ++ (show e)
         Right _ -> return () 
 
 main :: IO ()
