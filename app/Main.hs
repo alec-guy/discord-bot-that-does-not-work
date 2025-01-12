@@ -37,7 +37,7 @@ countWords :: Text -> InteractionResponseMessage
 countWords text = 
     InteractionResponseMessage 
     { interactionResponseMessageTTS = Nothing 
-    , interactionResponseMessageContent = Just $ pack $ show $ (show $ Prelude.length $ (Data.Text.words text), text)
+    , interactionResponseMessageContent = Just $ pack $ show $ (Prelude.length $ (Data.Text.words text), text)
     , interactionResponseMessageEmbeds = Nothing 
     , interactionResponseMessageAllowedMentions = Nothing 
     , interactionResponseMessageFlags = Nothing 
@@ -141,7 +141,7 @@ eventHandler event =
                                              Right _ -> do
                                                 lift $ putStrLn "success executing count words command" 
                                                 return ()  
-                                        _ -> lift $ putStrLn "User tried hello but it wasn't an option" 
+                                        _ -> lift $ putStrLn "User tried another command" 
 
                                 (MemberOrUser (Right user)) -> 
                                     let username = userName user
@@ -168,7 +168,7 @@ eventHandler event =
                                              Right _ -> do
                                                 lift $ putStrLn "success executing count words command" 
                                                 return ()   
-                                        _ -> lift $ putStrLn "User tried hello but it wasn't an option" 
+                                        _ -> lift $ putStrLn "User tried another command" 
 
                                  
 
