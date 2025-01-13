@@ -105,83 +105,63 @@ myDiscordOptions = RunDiscordOpts
                  , discordEnableCache = False
                  }
 
+
+handleNameAndOptions :: Text -> Maybe OptionsData ->  InteractionId -> InteractionToken ->  Text -> DiscordHandler () 
+handleNameAndOptions name options id token username = 
+            case name of 
+             "hello"     -> do 
+                result <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (sayhello username)))
+                case result of 
+                    Left e -> lift $ putStrLn $ "Error executing hello command: " ++ (show e)
+                    Right _ -> do
+                       lift $ putStrLn "success executing hello command to guild member" 
+                       return () 
+             "wordcount" ->  do 
+                let text = case options of 
+                            Nothing -> ""
+                            Just (OptionsDataValues [OptionDataValueString {optionDataValueName = t, optionDataValueString = e}]) -> 
+                               case e of 
+                                Left _ -> ""
+                                Right i -> i                                                         
+                result2 <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (countWords text)))
+                case result2 of 
+                    Left e -> lift $ putStrLn $ "Error executing count words command: " ++ (show e)
+                    Right _ -> do
+                       lift $ putStrLn "success executing count words command" 
+                       return ()  
+             _ -> lift $ putStrLn "User tried another command" 
+
+applicationCommandDataHandler :: InteractionId -> InteractionToken -> MemberOrUser -> ApplicationCommandData  -> DiscordHandler ()
+applicationCommandDataHandler id token memberoruser data1 = 
+    case memberoruser of 
+        (MemberOrUser (Left guildmem)) -> do 
+            let nickname = case memberNick guildmem of 
+                            Nothing -> ""
+                            Just x  -> x 
+            case data1 of 
+              ApplicationCommandDataChatInput {applicationCommandDataName = name, optionsData = options} -> 
+                handleNameAndOptions name options id token nickname 
+              _      -> lift $ putStrLn "Another kind of data"
+        (MemberOrUser (Right user)) -> do 
+            let username = userName user
+            case data1 of 
+              ApplicationCommandDataChatInput {applicationCommandDataName = name, optionsData = options} -> 
+                handleNameAndOptions name options id token username
+                    
+              _ -> lift $ putStrLn "Another kind of data"
+
+                
+
 eventHandler :: Event -> DiscordHandler () 
 eventHandler event = 
     case event of
         InteractionCreate interaction -> 
             case interaction of 
                 (InteractionApplicationCommand {interactionId = id, interactionUser = u, interactionToken = token , applicationCommandData = data1, ..}) -> 
-                    case data1 of 
-                       ApplicationCommandDataChatInput {applicationCommandDataName = t, optionsData = options} -> 
-                             case u of 
-                                (MemberOrUser (Left guildmem)) -> do
-                                    let nickname = case memberNick guildmem of 
-                                                    Nothing -> ""
-                                                    Just x  -> x
-                                    case t of 
-                                        "hello" -> do 
-                                           result <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (sayhello nickname)))
-                                           case result of 
-                                             Left e -> lift $ putStrLn $ "Error executing hello command: " ++ (show e)
-                                             Right _ -> do
-                                                lift $ putStrLn "success executing hello command" 
-                                                return () 
-                                        "wordcount" -> do 
-                                            let text = case options of 
-                                                        Nothing -> ""
-                                                        Just (OptionsDataValues [OptionDataValueString {optionDataValueName = t, optionDataValueString = e}]) -> 
-                                                            case e of 
-                                                                Left _ -> ""
-                                                                Right i -> i 
-                                                        _       -> ""
-                                                        
-                                            result2 <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (countWords text)))
-                                            case result2 of 
-                                             Left e -> lift $ putStrLn $ "Error executing count words command: " ++ (show e)
-                                             Right _ -> do
-                                                lift $ putStrLn "success executing count words command" 
-                                                return ()  
-                                        _ -> lift $ putStrLn "User tried another command" 
-
-                                (MemberOrUser (Right user)) -> 
-                                    let username = userName user
-                                    in case t of 
-                                        "hello" -> do 
-                                           result <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (sayhello username)))
-                                           case result of 
-                                             Left e -> lift $ putStrLn $ "Error executing hello command: " ++ (show e)
-                                             Right _ -> do
-                                                lift $ putStrLn "success executing hello command" 
-                                                return () 
-                                        "wordcount" -> do 
-                                            let text = case options of 
-                                                        Nothing -> ""
-                                                        Just (OptionsDataValues [OptionDataValueString {optionDataValueName = t, optionDataValueString = e}]) -> 
-                                                            case e of 
-                                                                Left _ -> ""
-                                                                Right i -> i 
-                                                        _       -> ""
-                                                        
-                                            result2 <- restCall (CreateInteractionResponse id token (InteractionResponseChannelMessage (countWords text)))
-                                            case result2 of 
-                                             Left e -> lift $ putStrLn $ "Error executing count words command: " ++ (show e)
-                                             Right _ -> do
-                                                lift $ putStrLn "success executing count words command" 
-                                                return ()   
-                                        _ -> lift $ putStrLn "User tried another command" 
-
-                                 
-
-                       _   -> do 
-                        lift $ putStrLn "Different type of data"
-                        return () 
+                    applicationCommandDataHandler id token u data1 
                 _  -> do
                     lift $ putStrLn "Different type of interaction" 
                     return () 
-        
-
-
-
         _ -> return () 
 
 
